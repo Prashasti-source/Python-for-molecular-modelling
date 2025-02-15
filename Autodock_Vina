@@ -1,0 +1,51 @@
+import os
+import subprocess
+
+# Define paths
+vina_path = "/path/to/vina"  # Update with the correct AutoDock Vina executable path
+receptor_pdbqt = "receptor.pdbqt"
+ligand_pdbqt = "ligand.pdbqt"
+config_file = "config.txt"
+output_file = "docked_output.pdbqt"
+
+# Check if files exist
+if not os.path.exists(receptor_pdbqt) or not os.path.exists(ligand_pdbqt):
+    raise FileNotFoundError("Receptor or Ligand PDBQT file not found!")
+
+# Define docking configuration
+config_content = """\
+receptor = receptor.pdbqt
+ligand = ligand.pdbqt
+out = docked_output.pdbqt
+
+center_x = 10
+center_y = 10
+center_z = 10
+size_x = 20
+size_y = 20
+size_z = 20
+
+exhaustiveness = 8
+num_modes = 10
+energy_range = 4
+"""
+
+# Write the config file
+with open(config_file, "w") as f:
+    f.write(config_content)
+
+# Run AutoDock Vina
+cmd = f"{vina_path} --config {config_file}"
+print(f"Running command: {cmd}")
+
+process = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+# Print output
+print(process.stdout)
+print(process.stderr)
+
+# Check for output file
+if os.path.exists(output_file):
+    print(f"Docking successful! Output saved to {output_file}")
+else:
+    print("Docking failed. Check errors.")

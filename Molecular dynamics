@@ -1,0 +1,65 @@
+from openmm.app import *
+from openmm import *
+from openmm.unit import *
+import mdtraj as md
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Load docked complex
+pdb = PDBFile('docked_complex.pdb')
+
+# Define force field
+forcefield = ForceField('amber14-all.xml', 'amber14/tip3p.xml')
+
+# Solvate and add ions (optional)
+modeller = Modeller(pdb.topology, pdb.positions)
+modeller.addSolvent(forcefield, model='tip3p', padding=1.0*nanometer)
+
+# Create system
+system = forcefield.createSystem(
+    modeller.topology,
+    nonbondedMethod=PME,
+    nonbondedCutoff=1.0*nanometer,
+    constraints=HBonds
+)
+
+# Define integrator (Langevin dynamics)
+integrator = LangevinIntegrator(
+    300*kelvin,  # Temperature
+    1/picosecond,  # Friction coefficient
+    2*femtoseconds  # Time step
+)
+
+# Create simulation
+platform = Platform.getPlatformByName('CPU')  # Use 'CUDA' for GPU
+simulation = Simulation(modeller.topology, system, integrator, platform)
+simulation.context.setPositions(modeller.positions)
+
+# Minimize energy
+print("Minimizing energy...")
+simulation.minimizeEnergy()
+
+# Set up simulation parameters
+simulation.context.setVelocitiesToTemperature(300*kelvin)
+simulation.reporters.append(StateDataReporter('md_output.csv', 100, step=True, potentialEnergy=True, temperature=True))
+
+# Run dynamics for 1000 steps (can increase)
+print("Running MD simulation...")
+simulation.step(1000)
+
+# Save final structure
+positions = simulation.context.getState(getPositions=True).getPositions()
+PDBFile.writeFile(modeller.topology, positions, open('final_structure.pdb', 'w'))
+
+print("MD simulation completed! Output saved as 'final_structure.pdb' and 'md_output.csv'.")
+
+# Load trajectory for analysis
+traj = md.load('final_structure.pdb')
+rmsf = md.rmsf(traj, traj, 0)
+
+# Plot RMSF
+plt.plot(rmsf)
+plt.xlabel("Residue Index")
+plt.ylabel("RMSF (nm)")
+plt.title("Root Mean Square Fluctuation (RMSF)")
+plt.show()

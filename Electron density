@@ -1,0 +1,33 @@
+import psi4
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Set computational parameters
+psi4.set_memory('500 MB')
+psi4.set_output_file("output.log", False)
+
+# Define the molecule (e.g., Water molecule H2O)
+molecule = psi4.geometry("""
+0 1
+O  0.000000  0.000000  0.000000
+H  0.758602  0.000000  0.504284
+H -0.758602  0.000000  0.504284
+""")
+
+# Perform SCF Calculation (Hartree-Fock or DFT)
+basis_set = "sto-3g"  # Small basis set for faster computation
+scf_wavefunction = psi4.energy("SCF/" + basis_set, return_wfn=True)[1]
+
+# Extract electron density
+electron_density = scf_wavefunction.Da().np  # Alpha electron density matrix
+
+# Print electron density matrix
+print("Electron Density Matrix:\n", electron_density)
+
+# Visualization (simple heatmap representation)
+plt.imshow(electron_density, cmap="viridis", interpolation="nearest")
+plt.colorbar(label="Electron Density")
+plt.title("Electron Density Matrix")
+plt.xlabel("Basis Function Index")
+plt.ylabel("Basis Function Index")
+plt.show()
